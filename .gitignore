@@ -1,3 +1,11 @@
+# custom
+*.babylon
+export/
+model/
+**scratch**
+
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
