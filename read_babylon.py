@@ -1,6 +1,5 @@
 import json
 import os
-import svgwrite
 import math
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d  # required for projection='3d'
@@ -166,17 +165,19 @@ def get_transformation_matrix_from_mesh(mesh):
 
     return get_transformation_matrix(mesh['position'], mesh['scaling'], mesh['rotation'])
 
-def transform_coordinates(x, y, z, T):
+def  transform_coordinates(x, y, z, T):
     """Transform x, y, z coordinates with a given transformation matrix."""
 
     p = np.ones((4,1))
     for idx in range(len(x)):
+
         # build vector
         p[0][0] = x[idx]
         p[1][0] = y[idx]
         p[2][0] = z[idx]
         # transform the vector
         p = np.dot(T, p)
+
         # store results in coordinated
         x[idx] = p[0][0]
         y[idx] = p[1][0]
@@ -197,19 +198,7 @@ def get_rotation_matrix(phi = 0, theta = 0, psi = 0):
     :return:
     """
 
-    # build the rotation matrix
-    R = np.zeros((3,3))
-    R[0][0] = math.cos(theta) * math.cos(phi)
-    R[1][0] = math.cos(theta) * math.sin(phi)
-    R[2][0] = -math.sin(theta)
-    R[0][1] = math.sin(psi) * math.sin(theta) * math.cos(phi) - math.cos(psi) * math.sin(phi)
-    R[1][1] = math.sin(psi) * math.sin(theta) * math.sin(phi) + math.cos(psi) * math.cos(phi)
-    R[2][1] = math.sin(psi) * math.cos(theta)
-    R[0][2] = math.cos(psi) * math.sin(theta) * math.cos(phi) + math.sin(psi) * math.sin(phi)
-    R[1][2] = math.sin(psi) * math.sin(theta) * math.sin(phi) - math.sin(psi) * math.cos(phi)
-    R[2][2] = math.cos(psi) * math.cos(theta)
-
-    return R
+    return get_transformation_matrix(np.zeros(3), np.ones(3), np.array([phi, theta, psi]))
 
 def print_mesh_children(mesh, level='  |- ', target=None):
     """Prints the name of the children."""
@@ -283,7 +272,7 @@ def get_mesh_route(mesh, route_str=None):
     return route_str
 
 
-def plot_meshes(mesh_list, output_dir='export', axes_to_plot=None, exclude=None, T=np.eye(4)):
+def plot_meshes(mesh_list, output_dir='export', axes_to_plot=None, exclude=None, T_in=np.eye(4)):
     """Call to plot the meshes."""
 
     # process the path
@@ -316,15 +305,14 @@ def plot_meshes(mesh_list, output_dir='export', axes_to_plot=None, exclude=None,
         cur_axes_to_plot.append(ax)
 
         # calculate the current transformation matrix
-        T = get_transformation_matrix_from_mesh(sub_mesh)
-        # T = np.matmul(T, get_transformation_matrix_from_mesh(sub_mesh))
+        # T = get_transformation_matrix_from_mesh(sub_mesh)
+        T = np.matmul(T_in, get_transformation_matrix_from_mesh(sub_mesh))
 
         # get position of mesh
-        x, y, z = get_mesh_positions(sub_mesh)
-        x, y, z = transform_coordinates(x, y, z, T)
+        x, y, z = transform_coordinates(*get_mesh_positions(sub_mesh), T)
 
         # plot data if available
-        if len(x) > 0:
+        if sub_mesh['isVisible'] and len(x) > 0:
             print('plotting: {} ...'.format(full_mesh_name))
 
             # add the current plot to the mesh
@@ -348,7 +336,7 @@ def plot_meshes(mesh_list, output_dir='export', axes_to_plot=None, exclude=None,
         # plot the sub meshes
         if sub_mesh['children']:
             plot_meshes(sub_mesh['children'], output_dir=cur_sub_folder, exclude=exclude, axes_to_plot=cur_axes_to_plot,
-                        T=T)
+                        T_in=T)
 
         # save the figure
         file_name = os.path.join(cur_sub_folder, '{}.png'.format(sub_mesh['name']))
@@ -448,13 +436,14 @@ def set_axes_equal(ax):
 
 
 if __name__ == "__main__":
+    import sys
     # File I/O ######################################
-    json_obj = load_babylon('Demo.babylon')
+    json_obj = load_babylon(sys.argv[1])
 
     # Gather Meshes ################################
     mesh_id_dict = get_mesh_id_dict(json_obj['meshes'])
     mesh_hierarchy = get_mesh_hierarchy(json_obj['meshes'])
-    print_mesh_hierarchy(mesh_hierarchy, target='Demo_Hierarchy.txt')
+    print_mesh_hierarchy(mesh_hierarchy, target='export/Demo_Hierarchy.txt')
 
     # Plot the Meshes ##############################
     plot_meshes(mesh_hierarchy, output_dir='export', exclude=['SceneSkyboxMesh', '[SceneManager]'])
