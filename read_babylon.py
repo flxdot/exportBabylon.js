@@ -11,7 +11,7 @@ def load_babylon(babylon_file):
 
     # process the path
     if not os.path.isabs(babylon_file):
-        output_dir = os.path.normpath(os.path.join(os.getcwd(), babylon_file))
+        babylon_file = os.path.normpath(os.path.join(os.getcwd(), babylon_file))
 
     with open(babylon_file) as json_file:
         return json.load(json_file)
@@ -83,7 +83,8 @@ def get_mesh_positions(mesh):
 
     return np.array(x), np.array(y), np.array(z)
 
-def rotate_mesh_positions(x,y,z, rotation):
+
+def rotate_mesh_positions(x, y, z, rotation):
     """Returns the x,y,z coordinates which are rotated around the angles of the rotation.
 
     :param x:
@@ -95,7 +96,7 @@ def rotate_mesh_positions(x,y,z, rotation):
 
     # fetch the rotation matrix
     R = get_rotation_matrix(rotation[2], rotation[1], rotation[0])
-    p = np.zeros((3,1))
+    p = np.zeros((3, 1))
     for idx in range(len(x)):
         # store coordinates in vector
         p[0][0] = x[idx]
@@ -108,7 +109,8 @@ def rotate_mesh_positions(x,y,z, rotation):
         y[idx] = p[1][0]
         z[idx] = p[2][0]
 
-    return x,y,z
+    return x, y, z
+
 
 def get_transformation_matrix(translation, scaling, rotation):
     """Returns the transformation matrix based on the translation, scaling and rotation vector
@@ -121,15 +123,15 @@ def get_transformation_matrix(translation, scaling, rotation):
 
     # get translation matrix
     T = np.eye(4)
-    T[0][3] = translation[0] # translation in x
-    T[1][3] = translation[1] # translation in y
-    T[2][3] = translation[2] # translation in z
+    T[0][3] = translation[0]  # translation in x
+    T[1][3] = translation[1]  # translation in y
+    T[2][3] = translation[2]  # translation in z
 
     # get the scaling matrix
     S = np.eye(4)
-    S[0][0] = scaling[0] # scaling along x
-    S[1][1] = scaling[1] # scaling along y
-    S[2][2] = scaling[2] # scaling along z
+    S[0][0] = scaling[0]  # scaling along x
+    S[1][1] = scaling[1]  # scaling along y
+    S[2][2] = scaling[2]  # scaling along z
 
     # get the rotation matrices
     # rotation around X axis
@@ -151,24 +153,26 @@ def get_transformation_matrix(translation, scaling, rotation):
     Rz[1][0] = math.sin(rotation[2])
     Rz[1][1] = math.cos(rotation[2])
     # build overall rotation matrix
-    Ryx = np.matmul(Ry, Rx) # R = Ry * Rx
+    Ryx = np.matmul(Ry, Rx)  # R = Ry * Rx
     R = np.matmul(Rz, Ryx)  # R = Rz * (Ry * Rx)
 
     # compute the total transformation matrix
-    SR = np.matmul(S, R)   #  ST = S * T
-    TSR = np.matmul(T, SR) # TSR = T * S * R = T * S * Rz * Ry * Rx
+    SR = np.matmul(S, R)  #  ST = S * T
+    TSR = np.matmul(T, SR)  # TSR = T * S * R = T * S * Rz * Ry * Rx
 
     return TSR
+
 
 def get_transformation_matrix_from_mesh(mesh):
     """Returns the transformation matrix based on the mesh."""
 
     return get_transformation_matrix(mesh['position'], mesh['scaling'], mesh['rotation'])
 
+
 def  transform_coordinates(x, y, z, T):
     """Transform x, y, z coordinates with a given transformation matrix."""
 
-    p = np.ones((4,1))
+    p = np.ones((4, 1))
     for idx in range(len(x)):
 
         # build vector
@@ -185,11 +189,12 @@ def  transform_coordinates(x, y, z, T):
 
     return x, y, z
 
-def get_rotation_matrix(phi = 0, theta = 0, psi = 0):
+
+def get_rotation_matrix(phi=0, theta=0, psi=0):
     """Returns the rotation matrix of the rotations around the angles axes.
 
     Rotation around Z Axes: phi
-    Rotation aroung Y Axes: theta
+    Rotation around Y Axes: theta
     Rotation around X Axes: psi
 
     :param phi: (mandatory, float) rotation angle around the z axes in radian
@@ -199,6 +204,7 @@ def get_rotation_matrix(phi = 0, theta = 0, psi = 0):
     """
 
     return get_transformation_matrix(np.zeros(3), np.ones(3), np.array([phi, theta, psi]))
+
 
 def print_mesh_children(mesh, level='  |- ', target=None):
     """Prints the name of the children."""
@@ -292,7 +298,7 @@ def plot_meshes(mesh_list, output_dir='export', axes_to_plot=None, exclude=None,
     sub_folder_cnt = dict()
     for sub_mesh in mesh_list:
         # shall the current mesh be skipped?
-        if sub_mesh['name'] in exclude:
+        if sub_mesh['name'] in exclude or sub_mesh['id'] in exclude:
             continue
 
         # get full name of the mesh
@@ -300,6 +306,7 @@ def plot_meshes(mesh_list, output_dir='export', axes_to_plot=None, exclude=None,
 
         # create new figure
         fig, ax = new_figure('{} ({})'.format(full_mesh_name, sub_mesh['id']))
+
         # make sure to append the axes
         cur_axes_to_plot = axes_to_plot[:]  # make sure to create a new list
         cur_axes_to_plot.append(ax)
@@ -345,12 +352,13 @@ def plot_meshes(mesh_list, output_dir='export', axes_to_plot=None, exclude=None,
         # close the figure
         plt.close(fig)
 
+
 def plot_wireframe(cur_ax, x, y, z, indices, color='k'):
-    """Plots all faces as wireframe."""
+    """Plots all faces as wire frame."""
 
     indices_idx = 0
     for idx in range(int(len(indices) / 3)):
-        # get the indeces of the face
+        # get the indices of the face
         data_idx = indices[indices_idx:indices_idx + 3]
         indices_idx += 3
         # close the loop
@@ -364,7 +372,7 @@ def new_figure(name=None):
     """Returns a new figure and axes."""
 
     my_dpi = 96
-    fig = plt.figure(figsize=(2000 / my_dpi, 2000 / my_dpi), dpi=my_dpi)
+    fig = plt.figure(figsize=(8000 / my_dpi, 8000 / my_dpi), dpi=my_dpi)
     ax = fig.gca(projection='3d', adjustable='box')
 
     # set axes
@@ -384,7 +392,7 @@ def new_figure(name=None):
 def save_figure(fig, file_name):
     """Saves the figure as the given filename."""
 
-    VIEW = {'iso': (30, 30), 'x': (0, 0), 'y': (0, 90), 'z': (90, 90)}
+    VIEW = {'iso': (30, 30), 'x': (0, 0), 'y': (0, -90), 'z': (-90, 90)}
 
     # process the path
     if not os.path.isabs(file_name):
@@ -416,13 +424,13 @@ def set_axes_radius(ax, origin, radius):
 
 
 def set_axes_equal(ax):
-    '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
-    cubes as cubes, etc..  This is one possible solution to Matplotlib's
+    """Make axes of 3D plot have equal scale so that spheres appear as spheres,
+    cubes as cubes, etc..  This is one possible solution to matplotlib
     ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
 
     Input
       ax: a matplotlib axis, e.g., as output from plt.gca().
-    '''
+    """
 
     limits = np.array([
         ax.get_xlim3d(),
